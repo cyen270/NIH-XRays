@@ -21,7 +21,9 @@ import os
 import glob
 import random
 import itertools
+import math
 
+import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sb
 
@@ -36,6 +38,9 @@ from scipy.interpolate import interp1d
 from sklearn.manifold import TSNE
 from sklearn.metrics import roc_curve, auc
 ```
+
+    3.1.1
+    
 
 ## Exploratory Data Analysis + Data Cleaning
 
@@ -477,6 +482,7 @@ data_labels.info()
 
 
 ```python
+# Get list of all possible chest conditions
 all_conditions = get_conditions(data_labels)
 all_conditions
 ```
@@ -493,6 +499,597 @@ all_conditions
 
 
 ```python
+# Generate co-occurrence matrix of conditions
+cooccur_mat = data_labels[all_conditions].T.dot(data_labels[all_conditions])
+cooccur_mat
+```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Atelectasis</th>
+      <th>Cardiomegaly</th>
+      <th>Consolidation</th>
+      <th>Edema</th>
+      <th>Effusion</th>
+      <th>Emphysema</th>
+      <th>Fibrosis</th>
+      <th>Hernia</th>
+      <th>Infiltration</th>
+      <th>Mass</th>
+      <th>Nodule</th>
+      <th>Pleural_Thickening</th>
+      <th>Pneumonia</th>
+      <th>Pneumothorax</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Atelectasis</td>
+      <td>11558</td>
+      <td>370</td>
+      <td>1223</td>
+      <td>221</td>
+      <td>3275</td>
+      <td>424</td>
+      <td>220</td>
+      <td>40</td>
+      <td>3264</td>
+      <td>739</td>
+      <td>590</td>
+      <td>496</td>
+      <td>262</td>
+      <td>774</td>
+    </tr>
+    <tr>
+      <td>Cardiomegaly</td>
+      <td>370</td>
+      <td>2776</td>
+      <td>169</td>
+      <td>127</td>
+      <td>1063</td>
+      <td>44</td>
+      <td>52</td>
+      <td>7</td>
+      <td>587</td>
+      <td>102</td>
+      <td>108</td>
+      <td>111</td>
+      <td>41</td>
+      <td>49</td>
+    </tr>
+    <tr>
+      <td>Consolidation</td>
+      <td>1223</td>
+      <td>169</td>
+      <td>4667</td>
+      <td>162</td>
+      <td>1287</td>
+      <td>103</td>
+      <td>79</td>
+      <td>4</td>
+      <td>1221</td>
+      <td>610</td>
+      <td>428</td>
+      <td>251</td>
+      <td>123</td>
+      <td>223</td>
+    </tr>
+    <tr>
+      <td>Edema</td>
+      <td>221</td>
+      <td>127</td>
+      <td>162</td>
+      <td>2302</td>
+      <td>593</td>
+      <td>30</td>
+      <td>9</td>
+      <td>3</td>
+      <td>981</td>
+      <td>129</td>
+      <td>131</td>
+      <td>64</td>
+      <td>340</td>
+      <td>33</td>
+    </tr>
+    <tr>
+      <td>Effusion</td>
+      <td>3275</td>
+      <td>1063</td>
+      <td>1287</td>
+      <td>593</td>
+      <td>13316</td>
+      <td>359</td>
+      <td>188</td>
+      <td>21</td>
+      <td>4000</td>
+      <td>1254</td>
+      <td>912</td>
+      <td>849</td>
+      <td>268</td>
+      <td>996</td>
+    </tr>
+    <tr>
+      <td>Emphysema</td>
+      <td>424</td>
+      <td>44</td>
+      <td>103</td>
+      <td>30</td>
+      <td>359</td>
+      <td>2516</td>
+      <td>36</td>
+      <td>4</td>
+      <td>449</td>
+      <td>215</td>
+      <td>115</td>
+      <td>151</td>
+      <td>23</td>
+      <td>747</td>
+    </tr>
+    <tr>
+      <td>Fibrosis</td>
+      <td>220</td>
+      <td>52</td>
+      <td>79</td>
+      <td>9</td>
+      <td>188</td>
+      <td>36</td>
+      <td>1686</td>
+      <td>8</td>
+      <td>345</td>
+      <td>117</td>
+      <td>166</td>
+      <td>176</td>
+      <td>11</td>
+      <td>80</td>
+    </tr>
+    <tr>
+      <td>Hernia</td>
+      <td>40</td>
+      <td>7</td>
+      <td>4</td>
+      <td>3</td>
+      <td>21</td>
+      <td>4</td>
+      <td>8</td>
+      <td>227</td>
+      <td>33</td>
+      <td>25</td>
+      <td>10</td>
+      <td>8</td>
+      <td>3</td>
+      <td>9</td>
+    </tr>
+    <tr>
+      <td>Infiltration</td>
+      <td>3264</td>
+      <td>587</td>
+      <td>1221</td>
+      <td>981</td>
+      <td>4000</td>
+      <td>449</td>
+      <td>345</td>
+      <td>33</td>
+      <td>19891</td>
+      <td>1157</td>
+      <td>1546</td>
+      <td>750</td>
+      <td>605</td>
+      <td>946</td>
+    </tr>
+    <tr>
+      <td>Mass</td>
+      <td>739</td>
+      <td>102</td>
+      <td>610</td>
+      <td>129</td>
+      <td>1254</td>
+      <td>215</td>
+      <td>117</td>
+      <td>25</td>
+      <td>1157</td>
+      <td>5779</td>
+      <td>906</td>
+      <td>451</td>
+      <td>71</td>
+      <td>431</td>
+    </tr>
+    <tr>
+      <td>Nodule</td>
+      <td>590</td>
+      <td>108</td>
+      <td>428</td>
+      <td>131</td>
+      <td>912</td>
+      <td>115</td>
+      <td>166</td>
+      <td>10</td>
+      <td>1546</td>
+      <td>906</td>
+      <td>6331</td>
+      <td>411</td>
+      <td>70</td>
+      <td>341</td>
+    </tr>
+    <tr>
+      <td>Pleural_Thickening</td>
+      <td>496</td>
+      <td>111</td>
+      <td>251</td>
+      <td>64</td>
+      <td>849</td>
+      <td>151</td>
+      <td>176</td>
+      <td>8</td>
+      <td>750</td>
+      <td>451</td>
+      <td>411</td>
+      <td>3384</td>
+      <td>48</td>
+      <td>289</td>
+    </tr>
+    <tr>
+      <td>Pneumonia</td>
+      <td>262</td>
+      <td>41</td>
+      <td>123</td>
+      <td>340</td>
+      <td>268</td>
+      <td>23</td>
+      <td>11</td>
+      <td>3</td>
+      <td>605</td>
+      <td>71</td>
+      <td>70</td>
+      <td>48</td>
+      <td>1430</td>
+      <td>41</td>
+    </tr>
+    <tr>
+      <td>Pneumothorax</td>
+      <td>774</td>
+      <td>49</td>
+      <td>223</td>
+      <td>33</td>
+      <td>996</td>
+      <td>747</td>
+      <td>80</td>
+      <td>9</td>
+      <td>946</td>
+      <td>431</td>
+      <td>341</td>
+      <td>289</td>
+      <td>41</td>
+      <td>5301</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+
+```python
+# Plot co-occurrence matrix
+plt.subplots(1, 1, figsize=(10,10))
+sb.heatmap(cooccur_mat.applymap(math.sqrt), cmap='Purples', cbar=False)
+plt.title('Co-occurrence of Chest Conditions')
+plt.ylim(-0.05, len(all_conditions)+0.05)
+plt.show()
+```
+
+
+![png](output_17_0.png)
+
+
+
+```python
+cooccur_mat.applymap(math.log10)
+```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Atelectasis</th>
+      <th>Cardiomegaly</th>
+      <th>Consolidation</th>
+      <th>Edema</th>
+      <th>Effusion</th>
+      <th>Emphysema</th>
+      <th>Fibrosis</th>
+      <th>Hernia</th>
+      <th>Infiltration</th>
+      <th>Mass</th>
+      <th>Nodule</th>
+      <th>Pleural_Thickening</th>
+      <th>Pneumonia</th>
+      <th>Pneumothorax</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Atelectasis</td>
+      <td>4.062883</td>
+      <td>2.568202</td>
+      <td>3.087426</td>
+      <td>2.344392</td>
+      <td>3.515211</td>
+      <td>2.627366</td>
+      <td>2.342423</td>
+      <td>1.602060</td>
+      <td>3.513750</td>
+      <td>2.868644</td>
+      <td>2.770852</td>
+      <td>2.695482</td>
+      <td>2.418301</td>
+      <td>2.888741</td>
+    </tr>
+    <tr>
+      <td>Cardiomegaly</td>
+      <td>2.568202</td>
+      <td>3.443419</td>
+      <td>2.227887</td>
+      <td>2.103804</td>
+      <td>3.026533</td>
+      <td>1.643453</td>
+      <td>1.716003</td>
+      <td>0.845098</td>
+      <td>2.768638</td>
+      <td>2.008600</td>
+      <td>2.033424</td>
+      <td>2.045323</td>
+      <td>1.612784</td>
+      <td>1.690196</td>
+    </tr>
+    <tr>
+      <td>Consolidation</td>
+      <td>3.087426</td>
+      <td>2.227887</td>
+      <td>3.669038</td>
+      <td>2.209515</td>
+      <td>3.109579</td>
+      <td>2.012837</td>
+      <td>1.897627</td>
+      <td>0.602060</td>
+      <td>3.086716</td>
+      <td>2.785330</td>
+      <td>2.631444</td>
+      <td>2.399674</td>
+      <td>2.089905</td>
+      <td>2.348305</td>
+    </tr>
+    <tr>
+      <td>Edema</td>
+      <td>2.344392</td>
+      <td>2.103804</td>
+      <td>2.209515</td>
+      <td>3.362105</td>
+      <td>2.773055</td>
+      <td>1.477121</td>
+      <td>0.954243</td>
+      <td>0.477121</td>
+      <td>2.991669</td>
+      <td>2.110590</td>
+      <td>2.117271</td>
+      <td>1.806180</td>
+      <td>2.531479</td>
+      <td>1.518514</td>
+    </tr>
+    <tr>
+      <td>Effusion</td>
+      <td>3.515211</td>
+      <td>3.026533</td>
+      <td>3.109579</td>
+      <td>2.773055</td>
+      <td>4.124374</td>
+      <td>2.555094</td>
+      <td>2.274158</td>
+      <td>1.322219</td>
+      <td>3.602060</td>
+      <td>3.098298</td>
+      <td>2.959995</td>
+      <td>2.928908</td>
+      <td>2.428135</td>
+      <td>2.998259</td>
+    </tr>
+    <tr>
+      <td>Emphysema</td>
+      <td>2.627366</td>
+      <td>1.643453</td>
+      <td>2.012837</td>
+      <td>1.477121</td>
+      <td>2.555094</td>
+      <td>3.400711</td>
+      <td>1.556303</td>
+      <td>0.602060</td>
+      <td>2.652246</td>
+      <td>2.332438</td>
+      <td>2.060698</td>
+      <td>2.178977</td>
+      <td>1.361728</td>
+      <td>2.873321</td>
+    </tr>
+    <tr>
+      <td>Fibrosis</td>
+      <td>2.342423</td>
+      <td>1.716003</td>
+      <td>1.897627</td>
+      <td>0.954243</td>
+      <td>2.274158</td>
+      <td>1.556303</td>
+      <td>3.226858</td>
+      <td>0.903090</td>
+      <td>2.537819</td>
+      <td>2.068186</td>
+      <td>2.220108</td>
+      <td>2.245513</td>
+      <td>1.041393</td>
+      <td>1.903090</td>
+    </tr>
+    <tr>
+      <td>Hernia</td>
+      <td>1.602060</td>
+      <td>0.845098</td>
+      <td>0.602060</td>
+      <td>0.477121</td>
+      <td>1.322219</td>
+      <td>0.602060</td>
+      <td>0.903090</td>
+      <td>2.356026</td>
+      <td>1.518514</td>
+      <td>1.397940</td>
+      <td>1.000000</td>
+      <td>0.903090</td>
+      <td>0.477121</td>
+      <td>0.954243</td>
+    </tr>
+    <tr>
+      <td>Infiltration</td>
+      <td>3.513750</td>
+      <td>2.768638</td>
+      <td>3.086716</td>
+      <td>2.991669</td>
+      <td>3.602060</td>
+      <td>2.652246</td>
+      <td>2.537819</td>
+      <td>1.518514</td>
+      <td>4.298657</td>
+      <td>3.063333</td>
+      <td>3.189209</td>
+      <td>2.875061</td>
+      <td>2.781755</td>
+      <td>2.975891</td>
+    </tr>
+    <tr>
+      <td>Mass</td>
+      <td>2.868644</td>
+      <td>2.008600</td>
+      <td>2.785330</td>
+      <td>2.110590</td>
+      <td>3.098298</td>
+      <td>2.332438</td>
+      <td>2.068186</td>
+      <td>1.397940</td>
+      <td>3.063333</td>
+      <td>3.761853</td>
+      <td>2.957128</td>
+      <td>2.654177</td>
+      <td>1.851258</td>
+      <td>2.634477</td>
+    </tr>
+    <tr>
+      <td>Nodule</td>
+      <td>2.770852</td>
+      <td>2.033424</td>
+      <td>2.631444</td>
+      <td>2.117271</td>
+      <td>2.959995</td>
+      <td>2.060698</td>
+      <td>2.220108</td>
+      <td>1.000000</td>
+      <td>3.189209</td>
+      <td>2.957128</td>
+      <td>3.801472</td>
+      <td>2.613842</td>
+      <td>1.845098</td>
+      <td>2.532754</td>
+    </tr>
+    <tr>
+      <td>Pleural_Thickening</td>
+      <td>2.695482</td>
+      <td>2.045323</td>
+      <td>2.399674</td>
+      <td>1.806180</td>
+      <td>2.928908</td>
+      <td>2.178977</td>
+      <td>2.245513</td>
+      <td>0.903090</td>
+      <td>2.875061</td>
+      <td>2.654177</td>
+      <td>2.613842</td>
+      <td>3.529430</td>
+      <td>1.681241</td>
+      <td>2.460898</td>
+    </tr>
+    <tr>
+      <td>Pneumonia</td>
+      <td>2.418301</td>
+      <td>1.612784</td>
+      <td>2.089905</td>
+      <td>2.531479</td>
+      <td>2.428135</td>
+      <td>1.361728</td>
+      <td>1.041393</td>
+      <td>0.477121</td>
+      <td>2.781755</td>
+      <td>1.851258</td>
+      <td>1.845098</td>
+      <td>1.681241</td>
+      <td>3.155336</td>
+      <td>1.612784</td>
+    </tr>
+    <tr>
+      <td>Pneumothorax</td>
+      <td>2.888741</td>
+      <td>1.690196</td>
+      <td>2.348305</td>
+      <td>1.518514</td>
+      <td>2.998259</td>
+      <td>2.873321</td>
+      <td>1.903090</td>
+      <td>0.954243</td>
+      <td>2.975891</td>
+      <td>2.634477</td>
+      <td>2.532754</td>
+      <td>2.460898</td>
+      <td>1.612784</td>
+      <td>3.724358</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+
+```python
+# Create column with labels for model training
 data_labels['conditions'] = data_labels[all_conditions].values.tolist()
 ```
 
@@ -592,7 +1189,7 @@ for (img_x, img_y, img_ax) in zip(train_x, train_y, axs):
 ```
 
 
-![png](output_25_0.png)
+![png](output_28_0.png)
 
 
 ## Build Models 
@@ -755,7 +1352,7 @@ plt.show()
 ```
 
 
-![png](output_38_0.png)
+![png](output_41_0.png)
 
 
 ## Retrospective - Observed Challenges and Potential Improvements 
